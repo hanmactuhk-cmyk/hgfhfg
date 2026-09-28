@@ -1,0 +1,8 @@
+{
+  "prompt": ["textarea", "[role=\"textbox\"]", "[contenteditable=\"true\"]", "[aria-label*=\"prompt\" i]", "[placeholder*=\"prompt\" i]"],
+  "video": ["button:has-text(\"Video\")", "[role=\"button\"]:has-text(\"Video\")", "text=Video"],
+  "modelMenu": ["[role=\"button\"]:has-text(\"Veo\")", "[role=\"button\"]:has-text(\"Omni\")", "button:has-text(\"Veo\")", "button:has-text(\"Omni\")"],
+  "modelOptionVeo31": ["[role=\"menuitem\"]:has-text(\"Veo 3.1\")", "[role=\"option\"]:has-text(\"Veo 3.1\")", "text=Veo 3.1"],
+  "generate": ["button:has-text(\"Generate\")", "[role=\"button\"]:has-text(\"Generate\")", "button:has-text(\"Tạo\")", "[aria-label*=\"Generate\" i]"],
+  "download": ["button:has-text(\"Download\")", "[role=\"button\"]:has-text(\"Download\")", "a[download]", "[aria-label*=\"Download\" i]"]
+}
