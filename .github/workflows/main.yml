@@ -1,0 +1,144 @@
+name: Build G-Labs Flow Automation
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows:
+    name: Build Windows EXE
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          npm ci
+
+      - name: Install Playwright Chromium
+        shell: pwsh
+        run: |
+          npx playwright install chromium
+
+      - name: Check project
+        shell: pwsh
+        run: |
+          node --check main.js
+          node --check preload.js
+          node --check automation/flow-runner.js
+          node --check automation/profile-manager.js
+          node --check renderer/app.js
+
+      - name: Build Windows application
+        shell: pwsh
+        run: |
+          npm run build
+
+      - name: Show build output
+        shell: pwsh
+        run: |
+          Write-Host "=== Project root ==="
+          Get-ChildItem -Force
+
+          Write-Host "=== Release ==="
+          if (Test-Path "release") {
+            Get-ChildItem "release" -Recurse |
+              Select-Object FullName, Length
+          }
+
+          Write-Host "=== Dist ==="
+          if (Test-Path "dist") {
+            Get-ChildItem "dist" -Recurse |
+              Select-Object FullName, Length
+          }
+
+      - name: Verify EXE
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem `
+            -Path "release","dist" `
+            -Filter "*.exe" `
+            -Recurse `
+            -ErrorAction SilentlyContinue |
+            Select-Object -First 1
+
+          if ($null -eq $exe) {
+            Write-Host "ERROR: Windows EXE was not found."
+            exit 1
+          }
+
+          Write-Host "EXE FOUND:"
+          Write-Host $exe.FullName
+          Write-Host "Size: $($exe.Length) bytes"
+
+      - name: Prepare portable package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory `
+            -Path "artifact" `
+            -Force | Out-Null
+
+          $exe = Get-ChildItem `
+            -Path "release","dist" `
+            -Filter "*.exe" `
+            -Recurse `
+            -ErrorAction SilentlyContinue |
+            Select-Object -First 1
+
+          Copy-Item `
+            $exe.FullName `
+            "artifact\G-Labs-Flow-Automation.exe" `
+            -Force
+
+          if (Test-Path "automation") {
+            Copy-Item `
+              "automation" `
+              "artifact\automation" `
+              -Recurse `
+              -Force
+          }
+
+          if (Test-Path "README.md") {
+            Copy-Item `
+              "README.md" `
+              "artifact\README.md" `
+              -Force
+          }
+
+      - name: Create ZIP
+        shell: pwsh
+        run: |
+          Compress-Archive `
+            -Path "artifact\*" `
+            -DestinationPath "G-Labs-Flow-Automation-Windows.zip" `
+            -Force
+
+      - name: Upload Windows EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: G-Labs-Flow-Automation-Windows
+          path: artifact/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: G-Labs-Flow-Automation-Portable
+          path: G-Labs-Flow-Automation-Windows.zip
+          if-no-files-found: error
+          retention-days: 30
